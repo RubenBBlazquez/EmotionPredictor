@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+datasets/data.csv
+datasets/icml_face_data.csv
