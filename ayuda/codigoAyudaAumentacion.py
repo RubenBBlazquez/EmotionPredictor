@@ -1,4 +1,6 @@
 # Horizontal Flip - Damos la vuelta a las imágenes entorno al eje y
+import numpy as np
+
 keyfacial_df_copy['Image'] = keyfacial_df_copy['Image'].apply(lambda x: np.flip(x, axis = 1))
 
 # dado que estamos volteando horizontalmente, los valores de la coordenada y serían los mismos
@@ -13,7 +15,7 @@ for i in range(len(columns)):
 from scipy import ndimage, misc
 
 img_45 = ndimage.rotate(image, -45, reshape=False)
-plt.imshow(img_45 , cmap=plt.cm.gray);
+plt.imshow(img_45 , cmap=plt.cm.gray)
 
 def rotar_puntos(points, angle):
     # Cambia los puntos en el plano de manera que la rotación está justo en el origen

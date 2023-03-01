@@ -130,3 +130,7 @@ dmypy.json
 
 datasets/data.csv
 datasets/icml_face_data.csv
+datasets/data.parquet
+datasets/icml_face_data.parquet
+datasets/datasets.rar
+datasets/augmented_data.parquet
