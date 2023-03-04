@@ -14,67 +14,61 @@ from sklearn.preprocessing import MinMaxScaler
 
 gc.collect()
 
-if __name__ == '__main__':
-    facial_face_image_shape = (48, 48)
-    facial_face_points_shape = (96, 96)
 
-    original_facial_face_points = pd.read_csv('datasets/data.csv')
-    original_facial_face_images = pd.read_csv('datasets/icml_face_data.csv')
+def rotar_puntos(points, angle):
+    # Cambia los puntos en el plano de manera que la rotación está justo en el origen
+    # nuestra imagen es de 96*96 ,así que restamos 48
+    points = points - 48
 
-    def rotar_puntos(points, angle):
-        # Cambia los puntos en el plano de manera que la rotación está justo en el origen
-        # nuestra imagen es de 96*96 ,así que restamos 48
-        points = points - 48
+    # matriz de rotación
+    # R = [ [cos(t), -sin(t)],[sin(t),cos(t)]
+    theta = np.radians(angle)
+    c, s = np.cos(theta), np.sin(theta)
+    R = np.array(((c, -s), (s, c)))
 
-        # matriz de rotación
-        # R = [ [cos(t), -sin(t)],[sin(t),cos(t)]
-        theta = np.radians(angle)
-        c, s = np.cos(theta), np.sin(theta)
-        R = np.array(((c, -s), (s, c)))
+    # rotar los puntos
+    for i in range(0, len(points), 2):
+        xy = np.array([points[i], points[i + 1]])
+        xy_rot = R @ xy
+        points[i], points[i + 1] = xy_rot
 
-        # rotar los puntos
-        for i in range(0, len(points), 2):
-            xy = np.array([points[i], points[i + 1]])
-            xy_rot = R @ xy
-            points[i], points[i + 1] = xy_rot
-
-        # volver al origen del centro de rotación
-        points = points + 48
-        return points
+    # volver al origen del centro de rotación
+    points = points + 48
+    return points
 
 
-    def get_data_augmentation_flip(df):
-        df_flip = df.copy()
-        columns = df.columns[:-1]
+def get_data_augmentation_flip(df):
+    df_flip = df.copy()
+    columns = df.columns[:-1]
 
-        images_to_flip = pd.Series(df_flip['Image'])
-        images_flip = images_to_flip.apply(lambda x: ' '.join(np.flip(np.array(x.split(' ')).astype(np.float32)).astype(str).tolist()))
+    images_to_flip = pd.Series(df_flip['Image'])
+    images_flip = images_to_flip.apply(
+        lambda x: ' '.join(np.flip(np.array(x.split(' ')).astype(np.float32)).astype(str).tolist()))
 
-        # dado que estamos volteando horizontalmente, los valores de la coordenada y serían los mismos
-        # Solo cambiarían los valores de la coordenada x, todo lo que tenemos que hacer es restar nuestros valores iniciales de la coordenada x del ancho de la imagen (96)
-        for i in range(len(columns)):
-            if i % 2 == 0:
-                df[columns[i]] = df[columns[i]].apply(lambda x: 96. - float(x))
+    # dado que estamos volteando horizontalmente, los valores de la coordenada y serían los mismos
+    # Solo cambiarían los valores de la coordenada x, todo lo que tenemos que hacer es restar nuestros valores iniciales de la coordenada x del ancho de la imagen (96)
+    for i in range(len(columns)):
+        if i % 2 == 0:
+            df[columns[i]] = df[columns[i]].apply(lambda x: 96. - float(x))
 
-        df_flip['Image'] = pd.Series(images_flip.values.tolist())
+    df_flip['Image'] = pd.Series(images_flip.values.tolist())
 
-        df_flip[columns] = rotar_puntos(df_flip.iloc[:, :-1].values, 180)
+    df_flip[columns] = rotar_puntos(df_flip.iloc[:, :-1].values, 180)
 
-        return df_flip
+    return df_flip
 
 
-    facial_face_points_flipped = get_data_augmentation_flip(original_facial_face_points)
+def data_augmentation(images_shape, dataset_path):
+    facial_face_images = pd.read_csv(dataset_path)
 
-    points = facial_face_points_flipped.iloc[:, :-1]
-    images = facial_face_points_flipped['Image'].apply(lambda x: pd.Series(x))
-
+    facial_face_points_flipped = get_data_augmentation_flip(facial_face_images)
 
     def get_data_augmentation_rotate(df_to_rotate, angles):
         def rotate_images(element, rotation_angles: list):
             rotation_angle = np.random.choice(rotation_angles, 1)[0]
 
             image = np.array(element['Image'].split(' ')).astype(np.float32)
-            rotated_image = image.reshape(facial_face_points_shape)
+            rotated_image = image.reshape(images_shape)
             rotated_image = np.array(ndimage.rotate(rotated_image, -rotation_angle, reshape=False))
 
             rotated_points = rotar_puntos(element[:-1].values, rotation_angle)
@@ -90,20 +84,17 @@ if __name__ == '__main__':
 
         return df_rotations
 
-
     angles_to_rotate = [-120, -80, -50, -10, 10, 15, 25, 50, 80, 90, 120, 150, 165]
 
-    facial_face_points_rotated = get_data_augmentation_rotate(original_facial_face_points, angles_to_rotate)
-    facial_face_points_rotated = get_data_augmentation_rotate(facial_face_points_rotated, angles_to_rotate)
+    facial_face_points_rotated = get_data_augmentation_rotate(facial_face_images, angles_to_rotate)
     facial_face_points_rotated = get_data_augmentation_rotate(facial_face_points_rotated, angles_to_rotate)
     print(f'facial_face_points_rotated dataset has {len(facial_face_points_rotated)} images')
-
 
     def set_random_brightness(dataframe_to_brightness):
         def change_image_brightness(element):
             brightness = np.random.uniform(0, 2)
 
-            image = np.array(element['Image'].split(' ')).astype(np.float32).reshape(facial_face_points_shape)
+            image = np.array(element['Image'].split(' ')).astype(np.float32).reshape(images_shape)
 
             element['Image'] = ' '.join(np.array(image * brightness).reshape(-1).astype(str).tolist())
 
@@ -113,13 +104,12 @@ if __name__ == '__main__':
 
         return pd.concat([dataframe_to_brightness, new_dataframe])
 
-
-    facial_face_points_with_brightness = set_random_brightness(original_facial_face_points)
+    facial_face_points_with_brightness = set_random_brightness(facial_face_images)
     facial_face_points_with_brightness = set_random_brightness(facial_face_points_with_brightness)
     print(f'facial_face_points_with_brightness dataset has {len(facial_face_points_with_brightness)} images')
 
     augmented_facial_face_points = [
-        original_facial_face_points,
+        facial_face_images,
         facial_face_points_flipped,
         facial_face_points_rotated,
         facial_face_points_with_brightness
@@ -136,17 +126,12 @@ if __name__ == '__main__':
         )
     )
 
-    normalized_augmented_facial_face_points = normalized_augmented_facial_face_points.\
-        sample(frac=1)\
+    normalized_augmented_facial_face_points = normalized_augmented_facial_face_points. \
+        sample(frac=1) \
         .reset_index(drop=True)
     normalized_augmented_facial_face_points.to_csv('datasets/augmented_data.csv', index=False)
     print(f'normalized_augmented_facial_face_points dataset has {len(normalized_augmented_facial_face_points)} images')
 
-    augmented_data = pd.read_csv('datasets/augmented_data.csv',
-                                 converters={'Image': lambda x: np.array(x.split(' ')).astype(np.float32)})
-    print(f'Augmented dataset has {len(augmented_data)} images')
 
-    dataframe_shape = normalized_augmented_facial_face_points.shape
-    dataframe_range = range(dataframe_shape[0] - 1000, dataframe_shape[0])
-    images = normalized_augmented_facial_face_points.loc[dataframe_range, 'Image'].apply(lambda x: pd.Series(x))
-    print(f'final Augmented dataset has {len(images)} images')
+if __name__ == '__main__':
+    data_augmentation((96, 96), 'datasets/data.csv')
