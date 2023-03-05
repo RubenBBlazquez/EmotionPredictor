@@ -49,9 +49,7 @@ def rotar_puntos(points, angle):
 
     # rotar los puntos
     for i in range(0, len(points), 2):
-        next_i = i
-        if (i + 1) < len(points):
-            next_i = i + 1
+        next_i = i + 1
 
         xy = np.array([points[i], points[next_i]])
         xy_rot = R @ xy
@@ -67,20 +65,17 @@ def get_data_augmentation_flip(df):
     df_flip = df.copy()
     columns = df.columns[:-1]
 
-    images_to_flip = pd.Series(df_flip['Image'])
-    images_flip = images_to_flip.apply(
-        lambda x: ' '.join(np.flip(np.array(x.split(' ')).astype(np.float32)).astype(str).tolist())
+    images_flip = df_flip['Image'].apply(
+        lambda x: ' '.join(np.flip(np.array(x.split(' ')).reshape(96, 96), axis=1).reshape(-1).astype(str).tolist())
     )
 
     # dado que estamos volteando horizontalmente, los valores de la coordenada y serían los mismos
     # Solo cambiarían los valores de la coordenada x, todo lo que tenemos que hacer es restar nuestros valores iniciales de la coordenada x del ancho de la imagen (96)
     for i in range(len(columns)):
         if i % 2 == 0:
-            df[columns[i]] = df[columns[i]].apply(lambda x: 96. - float(x))
+            df_flip[columns[i]] = df_flip[columns[i]].apply(lambda x: 96. - float(x))
 
     df_flip['Image'] = images_flip
-
-    df_flip[columns] = rotar_puntos(df_flip.iloc[:, :-1].values, 180)
 
     return df_flip
 
@@ -96,22 +91,19 @@ def manipulate_images(facial_face_images, images_shape, save_original) -> pd.Dat
 
             image = np.array(element['Image'].split(' ')).astype(np.float32)
             rotated_image = image.reshape(images_shape)
-            rotated_image = np.array(ndimage.rotate(rotated_image, rotation_angle, reshape=False))
+            rotated_image = np.array(ndimage.rotate(rotated_image, -rotation_angle, reshape=False))
 
-            rotated_points = rotar_puntos(element[:-1].values, -rotation_angle)
+            rotated_points = rotar_puntos(element[:-1].values, rotation_angle)
             element.loc[element[:-1].index.values] = rotated_points
             element['Image'] = ' '.join(rotated_image.reshape(-1).astype(str).tolist())
 
             return element
 
         new_df_rotations = df_to_rotate.apply(rotate_images, rotation_angles=angles, axis=1)
-        df_rotations = pd.concat([df_to_rotate, new_df_rotations])
 
-        # print(f'Rotated {len(df_rotations)} images')
+        return new_df_rotations
 
-        return df_rotations
-
-    angles_to_rotate = [10, 15, 25, 50, 80, 90, 120, 150, 165, 195, 250, 270, 300]
+    angles_to_rotate = [10, 15, 25, 50, 80, 90, 120, 150, 165]
 
     facial_face_points_rotated = get_data_augmentation_rotate(facial_face_images, angles_to_rotate)
 
@@ -197,12 +189,13 @@ def data_augmentation(images_shape, dataset_path, augmented_file_path, is_feathe
 
 if __name__ == '__main__':
     time_start = time.time()
-    data_augmentation((96, 96), 'datasets/data.csv', 'datasets/augmented_data', is_feather=False, chunk_size=150)
+    data_augmentation((96, 96), 'datasets/data.csv', 'datasets/augmented_data', is_feather=False, chunk_size=300)
     print(time.time() - time_start)
     time_start = time.time()
     print()
+
     data_augmentation((96, 96), 'datasets/augmented_data.feather', 'datasets/augmented_data', is_feather=True,
-                      save_original=False, chunk_size=1000)
+                      save_original=False, chunk_size=600)
     print(time.time() - time_start)
     time_start = time.time()
     print()
