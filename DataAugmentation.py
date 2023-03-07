@@ -103,7 +103,7 @@ def manipulate_images(facial_face_images, images_shape, save_original) -> pd.Dat
 
         return new_df_rotations
 
-    angles_to_rotate = [10, 15, 25, 50, 80, 90, 120, 150, 165]
+    angles_to_rotate = [-15, -25, -50, -80, -10, 10, 15, 25, 50, 80]
 
     facial_face_points_rotated = get_data_augmentation_rotate(facial_face_images, angles_to_rotate)
 
@@ -158,7 +158,7 @@ def manipulate_images(facial_face_images, images_shape, save_original) -> pd.Dat
 
 
 def data_augmentation(images_shape, dataset_path, augmented_file_path, is_feather=False, save_original=True,
-                      chunk_size=10000, n_elements_to_generate=30000):
+                      chunk_size=10000, n_elements_to_generate=50000):
     if is_feather:
         facial_face_images = pd.read_feather(dataset_path)
     else:
@@ -195,12 +195,7 @@ if __name__ == '__main__':
     print()
 
     data_augmentation((96, 96), 'datasets/augmented_data.feather', 'datasets/augmented_data', is_feather=True,
-                      save_original=False, chunk_size=600)
+                      save_original=False, chunk_size=600, n_elements_to_generate=50000)
     print(time.time() - time_start)
     time_start = time.time()
     print()
-    # data_augmentation((96, 96), 'datasets/augmented_data.feather', 'datasets/augmented_data', is_feather=True,
-    #                   save_original=False, chunk_size=1500)
-    # print(time.time() - time_start)
-    # time_start = time.time()
-    # print()
