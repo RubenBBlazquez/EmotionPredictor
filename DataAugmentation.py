@@ -18,6 +18,33 @@ from sklearn.preprocessing import MinMaxScaler
 gc.collect()
 
 
+def clean_original_dataset(dataset_path: str):
+    """Clean the original dataset."""
+    df = pd.read_csv(dataset_path)
+    df = df.dropna()
+    df = df.reset_index(drop=True)
+    columns = df.columns[:-1]
+
+    df[columns] = df[columns].astype('float32')
+
+    for index in range(0, 30):
+        df.drop(df[df[columns[index]] > 96].index, inplace=True)
+
+    def normalize_images(image):
+        if image.between(0, 1).all():
+            return ' '.join(image.astype(str).tolist())
+
+        return ' '.join((image / 255).astype(str).tolist())
+
+    images_split = pd.DataFrame(
+        df['Image'].str.split(
+            ' ', expand=True).to_numpy().astype('float16')
+    )
+
+    df['Image'] = images_split.apply(normalize_images, axis=1)
+
+    df.to_csv('datasets/data.csv', index=False)
+
 def visualize_images_with_points(n_images: int, dataset, shape, points):
     """Visualize n_images images from the dataset."""
     images = dataset.sample(n_images)
@@ -139,21 +166,6 @@ def manipulate_images(facial_face_images, images_shape, save_original) -> pd.Dat
     augmented_facial_face_points = pd.concat(augmented_facial_face_points, ignore_index=True, axis=0)
     # print(f'augmented_facial_face_points dataset has {len(augmented_facial_face_points)} images')
 
-    images_split = pd.DataFrame(
-        augmented_facial_face_points['Image'].str.split(
-            ' ', expand=True).to_numpy().astype('float16')
-    )
-
-    def normalize_images(image):
-        if image.between(0, 1).all():
-            return ' '.join(image.astype(str).tolist())
-
-        return ' '.join((image / 255).astype(str).tolist())
-
-    augmented_facial_face_points['Image'] = images_split.apply(normalize_images, axis=1)
-
-    # print(f'normalized_augmented_facial_face_points dataset has {len(augmented_facial_face_points)} images')
-
     return augmented_facial_face_points
 
 
@@ -188,6 +200,10 @@ def data_augmentation(images_shape, dataset_path, augmented_file_path, is_feathe
 
 
 if __name__ == '__main__':
+    clean_original_dataset('datasets/data.csv')
+
+    print(f'cleaned_original_dataset dataset has {len(pd.read_csv("datasets/data.csv"))} images')
+
     time_start = time.time()
     data_augmentation((96, 96), 'datasets/data.csv', 'datasets/augmented_data', is_feather=False, chunk_size=300)
     print(time.time() - time_start)
@@ -199,3 +215,6 @@ if __name__ == '__main__':
     print(time.time() - time_start)
     time_start = time.time()
     print()
+
+
+
