@@ -1,0 +1,10 @@
+tensorflow
+scipy
+matplotlib
+pandas
+numpy
+pyarrow
+scikit-learn
+scikit-image
+opencv-python
+keras_preprocessing
