@@ -128,13 +128,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-datasets/data.csv
-datasets/icml_face_data.csv
-datasets/data.parquet
-datasets/icml_face_data.parquet
-datasets/datasets.rar
-datasets/augmented_data.feather
-datasets/augmented_data.csv
-datasets/second_augmented_data.feather
-datasets/augmented_icml_data.feather
+datasets/*
 /models/*.h5
+
+.idea/
